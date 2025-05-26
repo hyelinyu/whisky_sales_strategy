@@ -165,7 +165,7 @@ for file in json_name:
             'age': product_facts_dict['age'],
             'country': product_facts_dict['country'],
             'region': product_facts_dict['region'],
-            'casktype': product_facts_dict['casktype'],
+            'casktype': product_facts_dict['cask type'],
             'colouring': product_facts_dict['colouring'],
             'nose': tasting_notes_dict['nose'],
             'palate': tasting_notes_dict['palate'],
