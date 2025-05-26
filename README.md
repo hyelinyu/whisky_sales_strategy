@@ -1,2 +1,2 @@
-# project_bottli
+# Bottli
 Liquor Recommendation 
