@@ -61,7 +61,6 @@ for file in json_name:
         product_main_info = safe_get_text(soup, 'ul', 'product-main__meta')
         vol_alcohol = safe_get_text(soup, 'p', 'product-main__data')
         product_price = safe_get_text(soup, 'p', 'product-action__price')
-        vat_price = safe_get_text(soup, 'p', 'product-action__vat-price')
 
         time.sleep(3)
 
@@ -98,7 +97,7 @@ for file in json_name:
         time.sleep(3)
 
         # Product Facts
-        product_facts_dict = {'bottler': np.nan, 'age': np.nan, 'country': np.nan, 'region': np.nan, 'casktype': np.nan, 'colouring': np.nan}
+        product_facts_dict = {'bottler': np.nan, 'age': np.nan, 'country': np.nan, 'region': np.nan, 'cask type': np.nan, 'colouring': np.nan,'vintage':np.nan}
         try:
             fact_types = soup.find_all(name='h3', class_='product-facts__type')
             fact_data = soup.find_all(name='p', class_='product-facts__data')
@@ -154,7 +153,6 @@ for file in json_name:
             'main_info': product_main_info,
             'volume_alcohol': vol_alcohol,
             'price': product_price,
-            'vat_price': vat_price,
             'style_body': style_dict['style_body'],
             'style_richness': style_dict['style_richness'],
             'style_smoke': style_dict['style_smoke'],
@@ -167,6 +165,7 @@ for file in json_name:
             'region': product_facts_dict['region'],
             'casktype': product_facts_dict['cask type'],
             'colouring': product_facts_dict['colouring'],
+            'vintage': product_facts_dict['vintage'],
             'nose': tasting_notes_dict['nose'],
             'palate': tasting_notes_dict['palate'],
             'finish': tasting_notes_dict['finish'],
