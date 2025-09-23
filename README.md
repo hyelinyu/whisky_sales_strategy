@@ -1,5 +1,5 @@
 
-# Bottli
+# Whiskey
 Liquor Recommendation 
 
 
