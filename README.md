@@ -1,17 +1,8 @@
 
-1. 프로젝트 개요 (Project Overview)
-
-2. 데이터 (Data)
-
-3. 방법론 (Methodology)
-
-4. 결과 (Results)
-
-5. 활용 방안 (Applications)
 
 
 
-7. 디렉토리 구조 (Project Structure)
+1. 디렉토리 구조 (Project Structure)
 ```
 whisky-project/
 ├── 01_data_collection.ipynb        # 데이터 수집 & 정리
@@ -36,3 +27,10 @@ whisky-project/
 │
 └── README.md                       # 프로젝트 설명
 ```
+## 🥃 Taste-based Whisky Recommender (Demo)
+
+고객의 맛 선호도(Body, Richness, Smoke, Sweetness)를 입력하면  
+풍미 클러스터링 + KNN 기반으로 위스키를 추천하고,  
+가격·캐스크·타입·빈티지·희귀도별 결과를 나눠 보여줍니다.
+
+🔗 **[Live Demo 바로가기](https://hyelinyu.github.io/whisky_sales_strategy/recommend.html)**
