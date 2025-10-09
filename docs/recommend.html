@@ -1,0 +1,228 @@
+
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>Whisky Recommender (Taste → Facets)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --bg:#0b0c10; --card:#111318; --ink:#e9eef2; --muted:#9aa4ad; --accent:#69b0ff; }
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+    .wrap{max-width:1100px;margin:24px auto;padding:0 16px;}
+    h1{font-size:24px;margin:0 0 12px;}
+    .card{background:var(--card);border-radius:16px;box-shadow:0 6px 16px rgba(0,0,0,.35);padding:16px;margin:14px 0;}
+    .row{display:flex;gap:12px;flex-wrap:wrap;}
+    .col{flex:1 1 240px;min-width:240px}
+    label{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin:4px 0;}
+    input[type=range]{width:100%;}
+    input[type=number]{width:100%;padding:8px;border-radius:8px;border:1px solid #222;background:#0f1116;color:var(--ink)}
+    select{width:100%;padding:8px;border-radius:8px;border:1px solid #222;background:#0f1116;color:var(--ink)}
+    button{background:var(--accent);border:none;color:#041019;padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
+    button:disabled{opacity:.5;cursor:wait}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#1b2330;color:#cfe6ff;font-size:12px;border:1px solid #243140}
+    table{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}
+    th,td{padding:8px;border-bottom:1px solid #1f2633;text-align:left;vertical-align:top}
+    th{color:#cbd6e0}
+    .section-title{display:flex;align-items:center;gap:8px;margin:6px 0 4px}
+    .muted{color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1fr;gap:14px}
+    @media (min-width:980px){ .grid{grid-template-columns:1.2fr .8fr} }
+    .tiny{font-size:12px}
+    .right{float:right}
+    .tag{background:#132333;color:#9fd2ff;border:1px solid #1c3952;padding:2px 6px;border-radius:8px;margin-left:6px;font-size:11px}
+    .error{color:#ff9e9e}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>위스키 추천 (취향 입력 → 결과 + Facets)</h1>
+
+  <div class="card grid">
+    <div>
+      <div class="row">
+        <div class="col">
+          <label>Body <span id="val-body">2.5</span></label>
+          <input id="body" type="range" min="0" max="5" step="0.1" value="2.5" oninput="sync('body')">
+        </div>
+        <div class="col">
+          <label>Richness <span id="val-richness">2.5</span></label>
+          <input id="richness" type="range" min="0" max="5" step="0.1" value="2.5" oninput="sync('richness')">
+        </div>
+        <div class="col">
+          <label>Smoke <span id="val-smoke">2.5</span></label>
+          <input id="smoke" type="range" min="0" max="5" step="0.1" value="2.5" oninput="sync('smoke')">
+        </div>
+        <div class="col">
+          <label>Sweetness <span id="val-sweetness">2.5</span></label>
+          <input id="sweetness" type="range" min="0" max="5" step="0.1" value="2.5" oninput="sync('sweetness')">
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:8px">
+        <div class="col">
+          <label>사전 필터: Country (선택)</label>
+          <input id="country" type="text" placeholder="예: Scotland,Japan(콤마로 다중)" />
+        </div>
+        <div class="col">
+          <label>사전 필터: Region (선택)</label>
+          <input id="region" type="text" placeholder="예: Islay,Highlands" />
+        </div>
+     
+        <div class="col">
+          <label>희귀점수 임계값 (선택)</label>
+          <input id="rareThreshold" type="number" step="0.01" min="0" max="1" placeholder="예: 0.75" />
+        </div>
+      </div>
+
+      <div class="row" style="align-items:flex-end;margin-top:8px">
+        <div class="col">
+          <label>Top-K 후보 수</label>
+          <input id="topk" type="number" min="10" max="200" value="80" />
+        </div>
+        <div class="col">
+          <button id="go" onclick="run()">추천 보기</button>
+        </div>
+        <div class="col tiny muted">
+          <div>가중치(선택): <span class="pill">Body=1</span> <span class="pill">Richness=1</span> <span class="pill">Smoke=1</span> <span class="pill">Sweetness=1</span></div>
+          <div class="tiny muted">* 필요 시 API에서 weights를 확장해 주세요.</div>
+        </div>
+      </div>
+      <div id="error" class="tiny error" style="margin-top:6px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title"><strong>설명</strong><span class="tag">taste-first</span><span class="tag">KNN</span><span class="tag">facets</span></div>
+      <div class="tiny muted">
+        1. 좌측에서 취향(0~5)을 입력 → 2. 서버의 <code>/api/recommend</code>가
+        <code>recommend_from_profile</code>와 <code>facet_views</code>를 호출 → 3. 기본 추천 + 가격/캐스크/타입/연도/빈티지/희귀로 나눠서 표시.
+      </div>
+      <div class="tiny muted" style="margin-top:8px">
+        응답 JSON 키: <code>reco</code>, <code>views.by_price_bucket</code>, <code>views.by_cask_group</code>, <code>views.by_whisky_type</code>, <code>views.by_bottling_year</code>, <code>views.vintage_yes</code>, <code>views.vintage_no</code>, <code>views.rarity_over_threshold</code>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">
+      <h2 style="margin:0">추천 결과 Top 20</h2>
+      <span class="muted tiny right">유사도 거리 오름차순</span>
+    </div>
+    <div id="table-reco"></div>
+  </div>
+
+  <div class="row">
+    <div class="card col">
+      <div class="section-title"><strong>Price Bucket</strong></div>
+      <div id="table-price"></div>
+    </div>
+    <div class="card col">
+      <div class="section-title"><strong>Cask Group</strong></div>
+      <div id="table-cask"></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card col">
+      <div class="section-title"><strong>Whisky Type</strong></div>
+      <div id="table-type"></div>
+    </div>
+    <div class="card col">
+      <div class="section-title"><strong>Bottling Year</strong></div>
+      <div id="table-year"></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card col">
+      <div class="section-title"><strong>Vintage = YES</strong></div>
+      <div id="table-vintage-yes"></div>
+    </div>
+    <div class="card col">
+      <div class="section-title"><strong>Vintage = NO</strong></div>
+      <div id="table-vintage-no"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title"><strong>Rarity ≥ Threshold</strong></div>
+    <div id="table-rare"></div>
+  </div>
+
+</div>
+
+<script>
+  const API = "/api/recommend"; // <- 백엔드 라우트로 교체
+
+  function sync(id){
+    document.getElementById("val-"+id).textContent =
+      document.getElementById(id).value;
+  }
+
+  function csvToArray(str){
+    return str.split(",").map(s=>s.trim()).filter(Boolean);
+  }
+
+  function renderTable(el, rows){
+    const mount = document.getElementById(el);
+    if(!rows || !rows.length){ mount.innerHTML = '<div class="muted tiny">데이터 없음</div>'; return; }
+    const cols = Object.keys(rows[0]);
+    let thead = "<tr>" + cols.map(c=>`<th>${c}</th>`).join("") + "</tr>";
+    let tbody = rows.map(r=>"<tr>"+cols.map(c=>`<td>${r[c] ?? ""}</td>`).join("")+"</tr>").join("");
+    mount.innerHTML = `<table><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+  }
+
+  async function run(){
+    const btn = document.getElementById("go");
+    const err = document.getElementById("error");
+    err.textContent = "";
+    btn.disabled = true;
+
+    const payload = {
+      body: Number(document.getElementById("body").value),
+      richness: Number(document.getElementById("richness").value),
+      smoke: Number(document.getElementById("smoke").value),
+      sweetness: Number(document.getElementById("sweetness").value),
+      top_k: Number(document.getElementById("topk").value),
+      extra_filters: {}
+    };
+
+    const country = csvToArray(document.getElementById("country").value);
+    const region  = csvToArray(document.getElementById("region").value);
+    const cluster = csvToArray(document.getElementById("cluster").value).map(x=>isNaN(Number(x))?x:Number(x));
+    if(country.length) payload.extra_filters.country = country;
+    if(region.length)  payload.extra_filters.region  = region;
+    if(cluster.length) payload.extra_filters.cluster_taste = cluster;
+
+    const rareThreshold = document.getElementById("rareThreshold").value;
+    if(rareThreshold) payload.rare_threshold = Number(rareThreshold);
+
+    try{
+      const res = await fetch(API, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(payload)
+      });
+      if(!res.ok){ throw new Error("API 호출 실패: " + res.status); }
+      const data = await res.json();
+
+      // 기본 상위 20
+      renderTable("table-reco", (data.reco || []).slice(0,20));
+
+      // facets
+      const v = data.views || {};
+      renderTable("table-price", v.by_price_bucket || []);
+      renderTable("table-cask",  v.by_cask_group   || []);
+      renderTable("table-type",  v.by_whisky_type  || []);
+      renderTable("table-year",  v.by_bottling_year|| []);
+      renderTable("table-vintage-yes", v.vintage_yes || []);
+      renderTable("table-vintage-no",  v.vintage_no  || []);
+      renderTable("table-rare", v.rarity_over_threshold || []);
+    }catch(e){
+      err.textContent = e.message ?? String(e);
+    }finally{
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>
