@@ -15,8 +15,7 @@
     .col{flex:1 1 240px;min-width:240px}
     label{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin:4px 0;}
     input[type=range]{width:100%;}
-    input[type=number]{width:100%;padding:8px;border-radius:8px;border:1px solid #222;background:#0f1116;color:var(--ink)}
-    select{width:100%;padding:8px;border-radius:8px;border:1px solid #222;background:#0f1116;color:var(--ink)}
+    input[type=number], input[type=text]{width:100%;padding:8px;border-radius:8px;border:1px solid #222;background:#0f1116;color:var(--ink)}
     button{background:var(--accent);border:none;color:#041019;padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
     button:disabled{opacity:.5;cursor:wait}
     .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#1b2330;color:#cfe6ff;font-size:12px;border:1px solid #243140}
@@ -67,7 +66,6 @@
           <label>사전 필터: Region (선택)</label>
           <input id="region" type="text" placeholder="예: Islay,Highlands" />
         </div>
-     
         <div class="col">
           <label>희귀점수 임계값 (선택)</label>
           <input id="rareThreshold" type="number" step="0.01" min="0" max="1" placeholder="예: 0.75" />
@@ -151,7 +149,7 @@
 </div>
 
 <script>
-  const API = "https://whisky-sales-strategy.onrender.com/api/recommend"; // <- 백엔드 라우트로 교체
+  const API = "https://whisky-sales-strategy.onrender.com/api/recommend"; // 백엔드 절대경로
 
   function sync(id){
     document.getElementById("val-"+id).textContent =
@@ -188,10 +186,8 @@
 
     const country = csvToArray(document.getElementById("country").value);
     const region  = csvToArray(document.getElementById("region").value);
-    const cluster = csvToArray(document.getElementById("cluster").value).map(x=>isNaN(Number(x))?x:Number(x));
     if(country.length) payload.extra_filters.country = country;
     if(region.length)  payload.extra_filters.region  = region;
-    if(cluster.length) payload.extra_filters.cluster_taste = cluster;
 
     const rareThreshold = document.getElementById("rareThreshold").value;
     if(rareThreshold) payload.rare_threshold = Number(rareThreshold);
@@ -202,7 +198,10 @@
         headers:{ "Content-Type":"application/json" },
         body: JSON.stringify(payload)
       });
-      if(!res.ok){ throw new Error("API 호출 실패: " + res.status); }
+      if(!res.ok){
+        const text = await res.text().catch(()=> "");
+        throw new Error(`API 호출 실패: ${res.status} ${res.statusText} ${text}`);
+      }
       const data = await res.json();
 
       // 기본 상위 20
